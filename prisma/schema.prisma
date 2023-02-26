@@ -1,0 +1,133 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "rhel-openssl-1.0.x"]
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Organization {
+  id                  String       @id
+  name                String       @unique
+  authId              String?      @unique
+  logoUrl             String?
+  showDemographicForm Boolean?
+  minGroupSize        Int?
+  minTeamSize         Int?
+  metadata            Json?
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+  deletedAt           DateTime?
+  collectors          Collector[]
+  respondents         Respondent[]
+  surveys             Survey[]
+  users               User[]
+
+  @@map("organization")
+}
+
+model User {
+  id             String       @id
+  organizationId String
+  authId         String       @unique
+  invitedAt      DateTime?
+  metadata       Json?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  deletedAt      DateTime?
+  respondents    Respondent[]
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  @@index([organizationId], map: "user_organizationId_fkey")
+  @@map("user")
+}
+
+model Survey {
+  id             String        @id
+  organizationId String?
+  name           String
+  model          Json
+  metadata       Json?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  deletedAt      DateTime?
+  respondents    Respondent[]
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+  collectors     Collector[]   @relation("CollectorToSurvey")
+
+  @@index([organizationId], map: "survey_organizationId_fkey")
+  @@map("survey")
+}
+
+model Collector {
+  id                  String       @id
+  organizationId      String
+  name                String
+  showDemographicForm Boolean
+  openAt              DateTime?
+  closeAt             DateTime?
+  report              Json?
+  reportedAt          DateTime?
+  metadata            Json?
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+  deletedAt           DateTime?
+  organization        Organization @relation(fields: [organizationId], references: [id])
+  respondents         Respondent[]
+  surveys             Survey[]     @relation("CollectorToSurvey")
+
+  @@index([organizationId], map: "collector_organizationId_fkey")
+  @@map("collector")
+}
+
+model Respondent {
+  id             String       @id
+  organizationId String
+  userId         String
+  collectorId    String
+  surveyId       String?
+  parentId       String?
+  group          String?
+  cohort         String?
+  recordPath     Json?
+  response       Json?
+  startedAt      DateTime?
+  endedAt        DateTime?
+  report         Json?
+  reportedAt     DateTime?
+  age            String?
+  gender         String?
+  maritalStatus  String?
+  race           String?
+  education      String?
+  country        String?
+  state          String?
+  workLocation   String?
+  metadata       Json?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  deletedAt      DateTime?
+  collector      Collector    @relation(fields: [collectorId], references: [id])
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  parent         Respondent?  @relation("ParentChildren", fields: [parentId], references: [id])
+  children       Respondent[] @relation("ParentChildren")
+  survey         Survey?      @relation(fields: [surveyId], references: [id])
+  user           User         @relation(fields: [userId], references: [id])
+
+  @@unique([collectorId, userId])
+  @@index([age])
+  @@index([gender])
+  @@index([maritalStatus])
+  @@index([race])
+  @@index([education])
+  @@index([country])
+  @@index([state])
+  @@index([workLocation])
+  @@index([organizationId], map: "respondent_organizationId_fkey")
+  @@index([parentId], map: "respondent_parentId_fkey")
+  @@index([surveyId], map: "respondent_surveyId_fkey")
+  @@index([userId], map: "respondent_userId_fkey")
+  @@map("respondent")
+}
